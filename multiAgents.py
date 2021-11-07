@@ -74,6 +74,24 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
+        #Obtenemos cuál es la comida más cercana para el pacman
+        distancias=[]
+        for foodPos in newFood.asList():
+            distancias.append(util.manhattanDistance(newPos,foodPos))
+        closestFood=min(distancias)
+        ptFood=1/closestFood
+
+        #Obtenemos cuál es la mejor opción para el fantasma
+        "Primero obtenemos las posiciones de los fantasmas"
+        ghostPos=[]
+        for pos in newGhostStates:
+            "Miramos si el fantastma no está asustado"
+            if pos.scaredTimer == 0:
+                ghostPos.append(pos)
+        closestGhost=min(ghostPos)
+
+        #El fantasma más cercano tomará la decisión que más le convenga
+        #TODO: No entiendo que hace aquí
         return successorGameState.getScore()
 
 def scoreEvaluationFunction(currentGameState):
