@@ -153,7 +153,33 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #Como minimax es recursivo, conviene crear una función para facilitar la recursión
+        return self.minimax(gameState,0,1)
+
+    def minimax(self,gameState,depth,agentIndex):
+        #Guardamos los movimientos posibles
+        movements = []
+        for action in gameState.getLegalActions(depth):
+            if action != 'Stop':
+                movements.append(action)
+
+        # Actualizamos la profundidad
+        agentIndex+=1
+        if agentIndex >= gameState.getNumAgents():
+            agentIndex=0
+            depth+=1
+
+        #Elegimos el mejor resultado
+        results=[]
+        for action in movements:
+            results.append(self.minimax(gameState.generateSuccessor(agentIndex,action),depth,agentIndex))
+
+        if agentIndex==0:   #Turno del pacman
+            bestResult=max(results)
+        else:               #Turno del fantasma
+            bestResult=min(results)
+        return bestResult
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
