@@ -10,7 +10,7 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-from typing import Iterable, Union, Tuple, Any, Type
+
 
 from util import manhattanDistance
 from game import Directions
@@ -74,25 +74,37 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        #Obtenemos cuál es la comida más cercana para el pacman
-        distancias=[]
-        for foodPos in newFood.asList():
-            distancias.append(util.manhattanDistance(newPos,foodPos))
-        closestFood=min(distancias)
-        ptFood=1/closestFood
+        foodList = newFood.asList()
+        foodDistances = []
+        count = 0
 
-        #Obtenemos cuál es la mejor opción para el fantasma
-        "Primero obtenemos las posiciones de los fantasmas"
-        ghostPos=[]
-        for pos in newGhostStates:
-            "Miramos si el fantastma no está asustado"
-            if pos.scaredTimer == 0:
-                ghostPos.append(pos)
-        closestGhost=min(ghostPos)
+        # Calculamos las distancias Manhattan de las comidas
+        for item in foodList:
+            foodDistances.append(manhattanDistance(newPos, item))
 
-        #El fantasma más cercano tomará la decisión que más le convenga
-        #TODO: No entiendo que hace aquí
-        return successorGameState.getScore()
+        # La comida que está más cerca tendrá más preferencia que las que están más alejadas
+        for i in foodDistances:
+            if i <= 4:
+                count += 1
+            elif i > 4 and i <= 10:
+                count += 0.5
+            else:
+                count += 0.25
+
+        ghostDistances = []
+        # Calculamos las distancias Manhattan de los fantasmas
+        for ghost in successorGameState.getGhostPositions():
+            ghostDistances.append(manhattanDistance(ghost, newPos))
+
+        # El fantasma que está más cerca tendrá menos preferencia que los estados en los que los
+        # fantasmas están más alejados
+        for ghost in successorGameState.getGhostPositions():
+            if ghost == newPos:
+                count = 5 - count
+            elif manhattanDistance(ghost, newPos) <= 4:
+                count = 2.5 - count
+
+        return successorGameState.getScore() + count
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -153,33 +165,43 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        #Como minimax es recursivo, conviene crear una función para facilitar la recursión
-        return self.minimax(gameState,0,1)
 
-    def minimax(self,gameState,depth,agentIndex):
-        #Guardamos los movimientos posibles
-        movements = []
-        for action in gameState.getLegalActions(depth):
-            if action != 'Stop':
-                movements.append(action)
+        def minimax(gameState, depth, agent):
 
-        # Actualizamos la profundidad
-        agentIndex+=1
-        if agentIndex >= gameState.getNumAgents():
-            agentIndex=0
-            depth+=1
+            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
+            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+                return [self.evaluationFunction(gameState)]
+            # Comprobar si todos los fantasmas han terminado una ronda
+            if agent == gameState.getNumAgents() - 1:
+                nextAgent = self.index
+                depth += 1
+            # Si no pasar al siguiente agente (fantasma)
+            else:
+                nextAgent = agent + 1
 
-        #Elegimos el mejor resultado
-        results=[]
-        for action in movements:
-            results.append(self.minimax(gameState.generateSuccessor(agentIndex,action),depth,agentIndex))
+            # Si agente == pacman
+            if agent == 0:
+                max = -float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newMax = minimax(successor, depth, nextAgent)[0]
+                    if newMax >= max:
+                        max = newMax
+                        bestAction = action
+                return [max, bestAction]
 
-        if agentIndex==0:   #Turno del pacman
-            bestResult=max(results)
-        else:               #Turno del fantasma
-            bestResult=min(results)
-        return bestResult
+            # Si agente == fantasma
+            else:
+                min = float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newMin = minimax(successor, depth, nextAgent)[0]
+                    if newMin <= min:
+                        min = newMin
+                        bestAction = action
+                return [min, bestAction]
 
+        return minimax(gameState, 0, self.index)[1]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -246,7 +268,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         # Y menos infinito e infinito como alfa y beta; empieza pacman
         return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
 
-
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
@@ -260,7 +281,37 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        def expectimax(gameState, agent, depth):
+            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
+            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+                return [self.evaluationFunction(gameState)]
+            # Comprobar si todos los fantasmas han terminado una ronda
+            if agent == gameState.getNumAgents() - 1:
+                nextAgent = self.index
+                depth += 1
+            # Si no, pasar al siguiente agente (fantasma)
+            else:
+                nextAgent = agent + 1
+
+            bestAction = None
+            numChild = len(gameState.getLegalActions(agent))
+            value = 0
+
+            for action in gameState.getLegalActions(agent):
+                successor = gameState.generateSuccessor(agent, action)
+                expecMax = expectimax(successor, nextAgent, depth)[0]
+                if agent == self.index:
+                    # Calculamos el valor max para el pacman
+                    if expecMax > value:
+                        value = expecMax
+                        bestAction = action
+                else:
+                    # Calculamos  el valor medio para los fantasmas
+                    value = value + (expecMax / numChild)
+            return [value, bestAction]
+
+        return expectimax(gameState, self.index, 0)[1]
 
 def betterEvaluationFunction(currentGameState):
     """
