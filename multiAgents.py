@@ -10,7 +10,7 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
+from typing import Iterable, Union, Tuple, Any, Type
 
 from util import manhattanDistance
 from game import Directions
@@ -74,37 +74,25 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        foodList = newFood.asList()
-        foodDistances=[]
-        count = 0
+        #Obtenemos cuál es la comida más cercana para el pacman
+        distancias=[]
+        for foodPos in newFood.asList():
+            distancias.append(util.manhattanDistance(newPos,foodPos))
+        closestFood=min(distancias)
+        ptFood=1/closestFood
 
-        #Calculamos las distancias Manhattan de las comidas
-        for item in foodList:
-            foodDistances.append(manhattanDistance(newPos, item))
+        #Obtenemos cuál es la mejor opción para el fantasma
+        "Primero obtenemos las posiciones de los fantasmas"
+        ghostPos=[]
+        for pos in newGhostStates:
+            "Miramos si el fantastma no está asustado"
+            if pos.scaredTimer == 0:
+                ghostPos.append(pos)
+        closestGhost=min(ghostPos)
 
-        #La comida que está más cerca tendrá más preferencia que las que están más alejadas
-        for i in foodDistances:
-            if i <= 4:
-                count += 1
-            elif i > 4 and i <= 10:
-                count += 0.5
-            else:
-                count += 0.25
-
-        ghostDistances = []
-        #Calculamos las distancias Manhattan de los fantasmas
-        for ghost in successorGameState.getGhostPositions():
-            ghostDistances.append(manhattanDistance(ghost, newPos))
-
-        #El fantasma que está más cerca tendrá menos preferencia que los estados en los que los
-        #fantasmas están más alejados
-        for ghost in successorGameState.getGhostPositions():
-            if ghost == newPos:
-                count = 5 - count
-            elif manhattanDistance(ghost, newPos) <= 4:
-                count = 2.5 - count
-
-        return successorGameState.getScore() + count
+        #El fantasma más cercano tomará la decisión que más le convenga
+        #TODO: No entiendo que hace aquí
+        return successorGameState.getScore()
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -145,57 +133,52 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction.
+
         Here are some method calls that might be useful when implementing minimax.
+
         gameState.getLegalActions(agentIndex):
         Returns a list of legal actions for an agent
         agentIndex=0 means Pacman, ghosts are >= 1
+
         gameState.generateSuccessor(agentIndex, action):
         Returns the successor game state after an agent takes an action
+
         gameState.getNumAgents():
         Returns the total number of agents in the game
+
         gameState.isWin():
         Returns whether or not the game state is a winning state
+
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
+        #Como minimax es recursivo, conviene crear una función para facilitar la recursión
+        return self.minimax(gameState,0,1)
 
-        def minimax(gameState, depth,agent):
+    def minimax(self,gameState,depth,agentIndex):
+        #Guardamos los movimientos posibles
+        movements = []
+        for action in gameState.getLegalActions(depth):
+            if action != 'Stop':
+                movements.append(action)
 
-            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
-            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
-                return [self.evaluationFunction(gameState)]
-            #Comprobar si todos los fantasmas han terminado una ronda
-            if agent == gameState.getNumAgents() - 1:
-                nextAgent=self.index
-                depth+= 1
-            #Si no pasar al siguiente agente (fantasma)
-            else:
-                nextAgent = agent + 1
+        # Actualizamos la profundidad
+        agentIndex+=1
+        if agentIndex >= gameState.getNumAgents():
+            agentIndex=0
+            depth+=1
 
-            #Si agente == pacman
-            if agent == 0:
-                max = -float("inf")
-                for action in gameState.getLegalActions(agent):
-                    successor = gameState.generateSuccessor(agent, action)
-                    newMax = minimax(successor, depth, nextAgent)[0]
-                    if newMax >= max:
-                        max =newMax
-                        bestAction = action
-                return [max, bestAction]
+        #Elegimos el mejor resultado
+        results=[]
+        for action in movements:
+            results.append(self.minimax(gameState.generateSuccessor(agentIndex,action),depth,agentIndex))
 
-            #Si agente == fantasma
-            else:
-                min = float("inf")
-                for action in gameState.getLegalActions(agent):
-                    successor = gameState.generateSuccessor(agent, action)
-                    newMin = minimax(successor, depth, nextAgent)[0]
-                    if newMin <= min:
-                        min =newMin
-                        bestAction =action
-                return [min, bestAction]
-
-        return minimax(gameState,0, self.index)[1]
+        if agentIndex==0:   #Turno del pacman
+            bestResult=max(results)
+        else:               #Turno del fantasma
+            bestResult=min(results)
+        return bestResult
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -203,49 +186,122 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     Your minimax agent with alpha-beta pruning (question 3)
     """
 
-    def getAction(self, gameState):
+    class AlphaBetaAgent(MultiAgentSearchAgent):
         """
-        Returns the minimax action using self.depth and self.evaluationFunction
+        Your minimax agent with alpha-beta pruning (question 3)
         """
-        "*** YOUR CODE HERE ***"
 
-        def alphaBeta(gameState, agent, depth, alpha, beta):
-            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
-            bestAction=None
-            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
-                return [self.evaluationFunction(gameState)]
-            # Comprobar si todos los fantasmas han terminado una ronda
-            if agent == gameState.getNumAgents() - 1:
-                nextAgent = self.index
-                depth += 1
-            # Si no pasar al siguiente agente (fantasma)
-            else:
-                nextAgent = agent + 1
+        def getAction(self, gameState):
 
-            # Si agente == pacman
-            if agent == 0:
-                max = -float("inf")
-                for action in gameState.getLegalActions(agent):
-                    successor = gameState.generateSuccessor(agent, action)
-                    newAlpha = alphaBeta(successor, depth, nextAgent,alpha,beta)[0]
-                    if newAlpha >= alpha:
-                        alpha = newAlpha
-                        bestAction = action
-                return [alpha, bestAction]
+            def alphaBeta(gameState, agent, depth, alpha, beta):  # Sub-funcion recursiva
 
-            # Si agente == fantasma
-            else:
-                min = float("inf")
-                for action in gameState.getLegalActions(agent):
-                    successor = gameState.generateSuccessor(agent, action)
-                    newBeta = alphaBeta(successor, depth, nextAgent,alpha,beta)[0]
-                    if newBeta <= beta:
-                        beta = newBeta
-                        bestAction = action
-                return [beta, bestAction]
+                # Si no hay movimientos posibles (estado terminal) o
+                # Si se ha alcanzado la maxima profundidad (nodo hoja)
+                if not gameState.getLegalActions(agent) or depth == self.depth:
+                    return self.evaluationFunction(gameState), 0
 
+                lastGhost = gameState.getNumAgents() - 1
+                pacman = self.index
+                if agent == lastGhost:  # Todos los fantasmas se han movido, le toca a Pacman
+                    depth += 1
+                    nextAgent = pacman  # Pacman siempre es 0
 
-        return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
+                else:
+                    nextAgent = agent + 1  # Siguiente fantasma
+
+                res = []
+                for action in gameState.getLegalActions(agent):  # Para cada sucesor
+                    if not res:  # Si es la primera vez que pasa por el nodo hijo (no ha visitado nietos)
+                        nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
+                        res.append(nextState[0])
+                        res.append(action)
+
+                        if agent == pacman:  # Si es el turno de PacMan seteamos alfa, sino beta
+                            alpha = max(res[0], alpha)
+                        else:
+                            beta = min(res[0], beta)
+                    else:
+
+                        if res[0] > beta and agent == pacman:  # Si estamos maximizando y alfa es mayor que beta
+                            return res
+
+                        if res[0] < alpha and agent != pacman:  # Si estamos minimizando y beta es menor que alfa
+                            return res
+
+                        # Si no se da ninguno de los dos casos se actualiza alfa o beta segun el caso
+
+                        nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
+                        nextValue = nextState[0]
+
+                        if agent == pacman:
+                            if nextValue > res[0]:
+                                res[0] = nextValue
+                                res[1] = action
+                                alpha = max(res[0], alpha)
+
+                        else:
+                            if nextValue < res[0]:
+                                res[0] = nextValue
+                                res[1] = action
+                                beta = min(res[0], beta)
+                return res
+
+            # Se llama a la funcion recursiva de podado con la profundidad 0,
+            # Y menos infinito e infinito como alfa y beta; empieza pacman
+            return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
+
+        def __init__(self, evalFn='scoreEvaluationFunction', depth='2'):
+            super().__init__(evalFn, depth)
+
+        @property
+        def __class__(self: _T) -> Type[_T]:
+            return super().__class__()
+
+        def __new__(cls) -> Any:
+            return super().__new__(cls)
+
+        def __setattr__(self, name: str, value: Any) -> None:
+            super().__setattr__(name, value)
+
+        def __eq__(self, o: object) -> bool:
+            return super().__eq__(o)
+
+        def __ne__(self, o: object) -> bool:
+            return super().__ne__(o)
+
+        def __str__(self) -> str:
+            return super().__str__()
+
+        def __repr__(self) -> str:
+            return super().__repr__()
+
+        def __hash__(self) -> int:
+            return super().__hash__()
+
+        def __format__(self, format_spec: str) -> str:
+            return super().__format__(format_spec)
+
+        def __getattribute__(self, name: str) -> Any:
+            return super().__getattribute__(name)
+
+        def __delattr__(self, name: str) -> None:
+            super().__delattr__(name)
+
+        def __sizeof__(self) -> int:
+            return super().__sizeof__()
+
+        def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
+            return super().__reduce__()
+
+        def __reduce_ex__(self, protocol: int) -> Union[str, Tuple[Any, ...]]:
+            return super().__reduce_ex__(protocol)
+
+        def __dir__(self) -> Iterable[str]:
+            return super().__dir__()
+
+        def __init_subclass__(cls) -> None:
+            super().__init_subclass__()
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -260,39 +316,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-
-        def expectimax(gameState, agent, depth):
-            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
-            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
-                return [self.evaluationFunction(gameState)]
-            # Comprobar si todos los fantasmas han terminado una ronda
-            if agent == gameState.getNumAgents() - 1:
-                nextAgent = self.index
-                depth += 1
-            # Si no, pasar al siguiente agente (fantasma)
-            else:
-                nextAgent = agent + 1
-
-            bestAction = None
-            numChild = len(gameState.getLegalActions(agent))
-            value = 0
-
-            for action in gameState.getLegalActions(agent):
-                successor = gameState.generateSuccessor(agent, action)
-                expecMax = expectimax(successor, nextAgent, depth)[0]
-                if agent == self.index:
-                    #Calculamos el valor max para el pacman
-                    if expecMax > value:
-                        value = expecMax
-                        bestAction = action
-                else:
-                    #Calculamos  el valor medio para los fantasmas
-                    value = value + (expecMax/ numChild)
-            return [value, bestAction]
-
-
-        return expectimax(gameState, self.index,0)[1]
-
+        util.raiseNotDefined()
 
 def betterEvaluationFunction(currentGameState):
     """
