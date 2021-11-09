@@ -92,7 +92,12 @@ class ReflexAgent(Agent):
 
         #El fantasma más cercano tomará la decisión que más le convenga
         #TODO: No entiendo que hace aquí
-        return successorGameState.getScore()
+        closeGhostDist = min([manhattanDistance(newPos, ghost.getPosition()) for ghost in newGhostStates])
+        foodList = newFood.asList()
+        closeFoodDist = min([manhattanDistance(newPos, food) for food in foodList])
+
+        score = closeFoodDist-closeGhostDist
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -133,52 +138,57 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction.
-
         Here are some method calls that might be useful when implementing minimax.
-
         gameState.getLegalActions(agentIndex):
         Returns a list of legal actions for an agent
         agentIndex=0 means Pacman, ghosts are >= 1
-
         gameState.generateSuccessor(agentIndex, action):
         Returns the successor game state after an agent takes an action
-
         gameState.getNumAgents():
         Returns the total number of agents in the game
-
         gameState.isWin():
         Returns whether or not the game state is a winning state
-
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        #Como minimax es recursivo, conviene crear una función para facilitar la recursión
-        return self.minimax(gameState,0,1)
 
-    def minimax(self,gameState,depth,agentIndex):
-        #Guardamos los movimientos posibles
-        movements = []
-        for action in gameState.getLegalActions(depth):
-            if action != 'Stop':
-                movements.append(action)
+        def minimax(gameState, depth,agent):
 
-        # Actualizamos la profundidad
-        agentIndex+=1
-        if agentIndex >= gameState.getNumAgents():
-            agentIndex=0
-            depth+=1
+            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
+            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+                return [self.evaluationFunction(gameState)]
+            #Comprobar si todos los fantasmas han terminado una ronda
+            if agent == gameState.getNumAgents() - 1:
+                nextAgent=self.index
+                depth+= 1
+            #Si no pasar al siguiente agente (fantasma)
+            else:
+                nextAgent = agent + 1
 
-        #Elegimos el mejor resultado
-        results=[]
-        for action in movements:
-            results.append(self.minimax(gameState.generateSuccessor(agentIndex,action),depth,agentIndex))
+            #Si agente == pacman
+            if agent == 0:
+                max = -float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newMax = minimax(successor, depth, nextAgent)[0]
+                    if newMax >= max:
+                        max =newMax
+                        bestAction = action
+                return [max, bestAction]
 
-        if agentIndex==0:   #Turno del pacman
-            bestResult=max(results)
-        else:               #Turno del fantasma
-            bestResult=min(results)
-        return bestResult
+            #Si agente == fantasma
+            else:
+                min = float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newMin = minimax(successor, depth, nextAgent)[0]
+                    if newMin <= min:
+                        min =newMin
+                        bestAction =action
+                return [min, bestAction]
+
+        return minimax(gameState,0, self.index)[1]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -191,7 +201,44 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        def alphaBeta(gameState, agent, depth, alpha, beta):
+            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
+            bestAction=None
+            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+                return [self.evaluationFunction(gameState)]
+            # Comprobar si todos los fantasmas han terminado una ronda
+            if agent == gameState.getNumAgents() - 1:
+                nextAgent = self.index
+                depth += 1
+            # Si no pasar al siguiente agente (fantasma)
+            else:
+                nextAgent = agent + 1
+
+            # Si agente == pacman
+            if agent == 0:
+                max = -float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newAlpha = alphaBeta(successor, depth, nextAgent,alpha,beta)[0]
+                    if newAlpha >= alpha:
+                        alpha = newAlpha
+                        bestAction = action
+                return [alpha, bestAction]
+
+            # Si agente == fantasma
+            else:
+                min = float("inf")
+                for action in gameState.getLegalActions(agent):
+                    successor = gameState.generateSuccessor(agent, action)
+                    newBeta = alphaBeta(successor, depth, nextAgent,alpha,beta)[0]
+                    if newBeta <= beta:
+                        beta = newBeta
+                        bestAction = action
+                return [beta, bestAction]
+
+
+        return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -206,7 +253,39 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        def expectimax(gameState, agent, depth):
+            # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
+            if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+                return [self.evaluationFunction(gameState)]
+            # Comprobar si todos los fantasmas han terminado una ronda
+            if agent == gameState.getNumAgents() - 1:
+                nextAgent = self.index
+                depth += 1
+            # Si no, pasar al siguiente agente (fantasma)
+            else:
+                nextAgent = agent + 1
+
+            bestAction = None
+            numChild = len(gameState.getLegalActions(agent))
+            value = 0
+
+            for action in gameState.getLegalActions(agent):
+                successor = gameState.generateSuccessor(agent, action)
+                expecMax = expectimax(successor, nextAgent, depth)[0]
+                if agent == self.index:
+                    #Calculamos el valor max para el pacman
+                    if expecMax > value:
+                        value = expecMax
+                        bestAction = action
+                else:
+                    #Calculamos  el valor medio para los fantasmas
+                    value = value + (expecMax/ numChild)
+            return [value, bestAction]
+
+
+        return expectimax(gameState, self.index,0)[1]
+
 
 def betterEvaluationFunction(currentGameState):
     """
