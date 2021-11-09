@@ -181,126 +181,70 @@ class MinimaxAgent(MultiAgentSearchAgent):
         return bestResult
 
 
+
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
     """
 
-    class AlphaBetaAgent(MultiAgentSearchAgent):
-        """
-        Your minimax agent with alpha-beta pruning (question 3)
-        """
+    def getAction(self, gameState):
 
-        def getAction(self, gameState):
+        def alphaBeta(gameState, agent, depth, alpha, beta):  # Sub-funcion recursiva
 
-            def alphaBeta(gameState, agent, depth, alpha, beta):  # Sub-funcion recursiva
+            # Si no hay movimientos posibles (estado terminal) o
+            # Si se ha alcanzado la maxima profundidad (nodo hoja)
+            if not gameState.getLegalActions(agent) or depth == self.depth:
+                return self.evaluationFunction(gameState), 0
 
-                # Si no hay movimientos posibles (estado terminal) o
-                # Si se ha alcanzado la maxima profundidad (nodo hoja)
-                if not gameState.getLegalActions(agent) or depth == self.depth:
-                    return self.evaluationFunction(gameState), 0
+            lastGhost = gameState.getNumAgents() - 1
+            pacman = self.index
+            if agent == lastGhost:  # Todos los fantasmas se han movido, le toca a Pacman
+                depth += 1
+                nextAgent = pacman  # Pacman siempre es 0
 
-                lastGhost = gameState.getNumAgents() - 1
-                pacman = self.index
-                if agent == lastGhost:  # Todos los fantasmas se han movido, le toca a Pacman
-                    depth += 1
-                    nextAgent = pacman  # Pacman siempre es 0
+            else:
+                nextAgent = agent + 1  # Siguiente fantasma
 
-                else:
-                    nextAgent = agent + 1  # Siguiente fantasma
+            res = []
+            for action in gameState.getLegalActions(agent):  # Para cada sucesor
+                if not res:  # Si es la primera vez que pasa por el nodo hijo (no ha visitado nietos)
+                    nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
+                    res.append(nextState[0])
+                    res.append(action)
 
-                res = []
-                for action in gameState.getLegalActions(agent):  # Para cada sucesor
-                    if not res:  # Si es la primera vez que pasa por el nodo hijo (no ha visitado nietos)
-                        nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
-                        res.append(nextState[0])
-                        res.append(action)
-
-                        if agent == pacman:  # Si es el turno de PacMan seteamos alfa, sino beta
-                            alpha = max(res[0], alpha)
-                        else:
-                            beta = min(res[0], beta)
+                    if agent == pacman:  # Si es el turno de PacMan seteamos alfa, sino beta
+                        alpha = max(res[0], alpha)
                     else:
+                        beta = min(res[0], beta)
+                else:
 
-                        if res[0] > beta and agent == pacman:  # Si estamos maximizando y alfa es mayor que beta
-                            return res
+                    if res[0] > beta and agent == pacman:  # Si estamos maximizando y alfa es mayor que beta
+                        return res
 
-                        if res[0] < alpha and agent != pacman:  # Si estamos minimizando y beta es menor que alfa
-                            return res
+                    if res[0] < alpha and agent != pacman:  # Si estamos minimizando y beta es menor que alfa
+                        return res
 
-                        # Si no se da ninguno de los dos casos se actualiza alfa o beta segun el caso
+                    # Si no se da ninguno de los dos casos se actualiza alfa o beta segun el caso
 
-                        nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
-                        nextValue = nextState[0]
+                    nextState = alphaBeta(gameState.generateSuccessor(agent, action), nextAgent, depth, alpha, beta)
+                    nextValue = nextState[0]
 
-                        if agent == pacman:
-                            if nextValue > res[0]:
-                                res[0] = nextValue
-                                res[1] = action
-                                alpha = max(res[0], alpha)
+                    if agent == pacman:
+                        if nextValue > res[0]:
+                            res[0] = nextValue
+                            res[1] = action
+                            alpha = max(res[0], alpha)
 
-                        else:
-                            if nextValue < res[0]:
-                                res[0] = nextValue
-                                res[1] = action
-                                beta = min(res[0], beta)
-                return res
+                    else:
+                        if nextValue < res[0]:
+                            res[0] = nextValue
+                            res[1] = action
+                            beta = min(res[0], beta)
+            return res
 
-            # Se llama a la funcion recursiva de podado con la profundidad 0,
-            # Y menos infinito e infinito como alfa y beta; empieza pacman
-            return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
-
-        def __init__(self, evalFn='scoreEvaluationFunction', depth='2'):
-            super().__init__(evalFn, depth)
-
-        @property
-        def __class__(self: _T) -> Type[_T]:
-            return super().__class__()
-
-        def __new__(cls) -> Any:
-            return super().__new__(cls)
-
-        def __setattr__(self, name: str, value: Any) -> None:
-            super().__setattr__(name, value)
-
-        def __eq__(self, o: object) -> bool:
-            return super().__eq__(o)
-
-        def __ne__(self, o: object) -> bool:
-            return super().__ne__(o)
-
-        def __str__(self) -> str:
-            return super().__str__()
-
-        def __repr__(self) -> str:
-            return super().__repr__()
-
-        def __hash__(self) -> int:
-            return super().__hash__()
-
-        def __format__(self, format_spec: str) -> str:
-            return super().__format__(format_spec)
-
-        def __getattribute__(self, name: str) -> Any:
-            return super().__getattribute__(name)
-
-        def __delattr__(self, name: str) -> None:
-            super().__delattr__(name)
-
-        def __sizeof__(self) -> int:
-            return super().__sizeof__()
-
-        def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
-            return super().__reduce__()
-
-        def __reduce_ex__(self, protocol: int) -> Union[str, Tuple[Any, ...]]:
-            return super().__reduce_ex__(protocol)
-
-        def __dir__(self) -> Iterable[str]:
-            return super().__dir__()
-
-        def __init_subclass__(cls) -> None:
-            super().__init_subclass__()
+        # Se llama a la funcion recursiva de podado con la profundidad 0,
+        # Y menos infinito e infinito como alfa y beta; empieza pacman
+        return alphaBeta(gameState, self.index, 0, -float("inf"), float("inf"))[1]
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
