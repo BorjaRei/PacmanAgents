@@ -74,30 +74,37 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        #Obtenemos cuál es la comida más cercana para el pacman
-        distancias=[]
-        for foodPos in newFood.asList():
-            distancias.append(util.manhattanDistance(newPos,foodPos))
-        closestFood=min(distancias)
-        ptFood=1/closestFood
-
-        #Obtenemos cuál es la mejor opción para el fantasma
-        "Primero obtenemos las posiciones de los fantasmas"
-        ghostPos=[]
-        for pos in newGhostStates:
-            "Miramos si el fantastma no está asustado"
-            if pos.scaredTimer == 0:
-                ghostPos.append(pos)
-        closestGhost=min(ghostPos)
-
-        #El fantasma más cercano tomará la decisión que más le convenga
-        #TODO: No entiendo que hace aquí
-        closeGhostDist = min([manhattanDistance(newPos, ghost.getPosition()) for ghost in newGhostStates])
         foodList = newFood.asList()
-        closeFoodDist = min([manhattanDistance(newPos, food) for food in foodList])
+        foodDistances=[]
+        count = 0
 
-        score = closeFoodDist-closeGhostDist
-        return score
+        #Calculamos las distancias Manhattan de las comidas
+        for item in foodList:
+            foodDistances.append(manhattanDistance(newPos, item))
+
+        #La comida que está más cerca tendrá más preferencia que las que están más alejadas
+        for i in foodDistances:
+            if i <= 4:
+                count += 1
+            elif i > 4 and i <= 10:
+                count += 0.5
+            else:
+                count += 0.25
+
+        ghostDistances = []
+        #Calculamos las distancias Manhattan de los fantasmas
+        for ghost in successorGameState.getGhostPositions():
+            ghostDistances.append(manhattanDistance(ghost, newPos))
+
+        #El fantasma que está más cerca tendrá menos preferencia que los estados en los que los
+        #fantasmas están más alejados
+        for ghost in successorGameState.getGhostPositions():
+            if ghost == newPos:
+                count = 5 - count
+            elif manhattanDistance(ghost, newPos) <= 4:
+                count = 2.5 - count
+
+        return successorGameState.getScore() + count
 
 def scoreEvaluationFunction(currentGameState):
     """
