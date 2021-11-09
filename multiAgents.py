@@ -216,7 +216,75 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    pacman=currentGameState.getPacmanPosition()
+    ghostPositions=currentGameState.getGhostStates()
+    ghosts=[]
+    scaredGhosts=[]
+
+    #Cargamos los fantasmas
+    for ghost in ghostPositions:
+        if ghost.scaredTimer:   #Si los fantasmas están asustados
+            scaredGhosts.append(ghost)
+        else:                   #Si no están asustados
+            ghosts.append(ghost)
+
+    #Obtenemos los puntos obtenidos
+    #Los puntos nos van a servir para elegir la acción que tomará pacman
+    #A cada acción le añadiremos la preferencia relativa
+    pt=0
+    #Los puntos del estado
+    pt+=5*currentGameState.getScore()
+    #Sumamos a la puntuación el número de comidas
+    pt+=-10*len(currentGameState.getFood().asList())
+    #Sumamos a la puntuación el número de capsulas
+    pt+=-20*len(currentGameState.getCapsules())
+
+    #Inicializamos las distancias para cada objeto
+    foodDistances = []
+    ghostsDistances = []
+    scaredGhostsDistances = []
+
+    #Obtenemos las distancias hacía la comida
+    for food in currentGameState.getFood().asList():
+        foodDistances.append(manhattanDistance(pacman, food))
+
+    #Obtenemos las distancias de los fantasmas al pacman
+    for ghost in ghosts:
+        ghostsDistances.append(manhattanDistance(pacman, ghost.getPosition()))
+
+    #Obtenemos las distancias de los fantasmas asustados al pacman
+    for ghost in scaredGhosts:
+        scaredGhostsDistances.append(manhattanDistance(pacman, ghost.getPosition()))
+
+    #Para tener una mejor puntuación, cuando una comida esta muy cerca conviene comerla
+    #ya que puede que al rededor no haya y acabe perdiendo mas tiempo
+    for food in foodDistances:
+        if food<3:
+            pt+=-1*food
+        if food<7:
+            pt+=-0.75*food
+        else:
+            pt+=-0.5*food
+
+    #Cuando tenemos fantasmas asustados cerca, conviene comerlos, ya que nos dan muchos puntos y
+    #luego es muy probable que el fantasma aparezca alejado a la posición del pacman
+    for ghost in scaredGhostsDistances:
+        if ghost<3:
+            pt+=-30*ghost
+        else:
+            pt+=-15*ghost
+
+    #Cuando tenemos fantasmas normales cerca, queremos alejarnos de él, por lo que tendrá una
+    #importancia relevante
+    for ghost in ghostsDistances:
+        if ghost<3:
+            pt+=5 * ghost
+        elif ghost<7:
+            pt+=2*ghost
+        else:
+            pt+=0.5*ghost
+
+    return pt
 
 # Abbreviation
 better = betterEvaluationFunction
