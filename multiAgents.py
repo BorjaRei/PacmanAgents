@@ -285,6 +285,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         def expectimax(gameState, agent, depth):
             # Comprobar si es un estado terminal o se ha llegado a la profundidad maxima
             if (not gameState.getLegalActions(agent) or (depth == self.depth)):
+
                 return [self.evaluationFunction(gameState)]
             # Comprobar si todos los fantasmas han terminado una ronda
             if agent == gameState.getNumAgents() - 1:
@@ -296,7 +297,12 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
             bestAction = None
             numChild = len(gameState.getLegalActions(agent))
-            value = 0
+
+            if agent == self.index:
+                value = -float("inf")
+
+            else:
+                value = 0
 
             for action in gameState.getLegalActions(agent):
                 successor = gameState.generateSuccessor(agent, action)
@@ -309,6 +315,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 else:
                     # Calculamos  el valor medio para los fantasmas
                     value = value + (expecMax / numChild)
+
             return [value, bestAction]
 
         return expectimax(gameState, self.index, 0)[1]
@@ -357,10 +364,6 @@ def betterEvaluationFunction(currentGameState):
     for ghost in ghosts:
         ghostsDistances.append(manhattanDistance(pacman, ghost.getPosition()))
 
-    #Obtenemos las distancias de los fantasmas asustados al pacman
-    for ghost in scaredGhosts:
-        scaredGhostsDistances.append(manhattanDistance(pacman, ghost.getPosition()))
-
     #Para tener una mejor puntuación, cuando una comida esta muy cerca conviene comerla
     #ya que puede que al rededor no haya y acabe perdiendo mas tiempo
     for food in foodDistances:
@@ -371,13 +374,6 @@ def betterEvaluationFunction(currentGameState):
         else:
             pt+=-0.5*food
 
-    #Cuando tenemos fantasmas asustados cerca, conviene comerlos, ya que nos dan muchos puntos y
-    #luego es muy probable que el fantasma aparezca alejado a la posición del pacman
-    for ghost in scaredGhostsDistances:
-        if ghost<3:
-            pt+=-30*ghost
-        else:
-            pt+=-15*ghost
 
     #Cuando tenemos fantasmas normales cerca, queremos alejarnos de él, por lo que tendrá una
     #importancia relevante
